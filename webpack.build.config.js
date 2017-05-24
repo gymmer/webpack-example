@@ -2,7 +2,6 @@ var path = require('path');
 
 // webpack 依赖
 var webpack = require('webpack');
-var devServer = require('webpack-dev-server');
 
 // webpack 插件
 var HtmlWebpckPlugin = require('html-webpack-plugin');
@@ -22,16 +21,12 @@ module.exports = {
 
 	// 打包输出路径
 	output: {
-		path: getAbsolutePath('dist'),
-		filename: 'js/[name].js'
+		path: getAbsolutePath('build'),
+		filename: 'js/[name]-[hash].js'
 		
 		// 使用CDN
 		// publicPath: 'http://cdn.com/'
 	},
-
-	// 使用Source Map
-	// devtool: 'source-map',//配置生成Source Maps，选择合适的选项
-	// devtool: 'eval-source-map',//配置生成Source Maps，选择合适的选项
 	
 	module: {
 		loaders: [
@@ -82,7 +77,7 @@ module.exports = {
 	        	test: /\.(scss|sass)$/,
 		        loader: ExtractTextWebpackPlugin.extract({
 		        	fallback: 'style-loader',
-		        	use: 'css-loader!ruby-sass-loader?compass=1&outputStyle=expanded'
+		        	use: 'css-loader!ruby-sass-loader?compass=1&outputStyle=compress'
 	        	}),
 	        	include: getAbsolutePath('src'),
 	        	exclude: getAbsolutePath('node_modules')
@@ -91,21 +86,10 @@ module.exports = {
 		]
 	},
 
-	// 启动本地服务器:  
-	// （1）node_modules/.bin/webpack-dev-server
-	// （2）npm run server
-	devServer: {
-	    contentBase: getAbsolutePath('dist'),	// 根目录
-	    // colors: true,//终端中输出结果为彩色
-	    // historyApiFallback: true,//不跳转
-	    inline: true, //实时刷新
-	    port: 8080
-	},
-
 	plugins: [
 
 		// 清除构建的目标路径
-		new CleanWebpackPlugin(['dist'], {
+		new CleanWebpackPlugin(['build'], {
             root: __dirname,
             verbose: true,
             dry: false
@@ -113,13 +97,17 @@ module.exports = {
 
 		// 构建HTML文件
 		new HtmlWebpckPlugin({
-			template: getAbsolutePath('src/index.html')
+			template: getAbsolutePath('src/index.html'),
+			minify: {
+				removeComments: true,
+				collapseWhitespace: true
+			}
 		}),
 
 		// 提取样式文件
 		new ExtractTextWebpackPlugin({
 		    filename: function (getPath) {
-		    	return getPath('css/[name].css').replace('css/js', 'css');
+		    	return getPath('css/[name]-[hash].css').replace('css/js', 'css');
 		    },
 		    allChunks: true
 		}),
@@ -135,6 +123,9 @@ module.exports = {
 				to: 'fonts'
 			}
 		]),
+
+		// 压缩JS文件
+	    new webpack.optimize.UglifyJsPlugin(),
 
 		// 版权声明
 		new webpack.BannerPlugin("Copyright Alibaba inc.")
