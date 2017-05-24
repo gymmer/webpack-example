@@ -10,16 +10,26 @@
 
 `gem install compass`
 
-#### 开发
+#### 开发环境
 
 `webpack`
+
+或
+
+`webpack -d`
+
+或
+
+`webpack -development`
 
 实时监听：`webpack --watch`
 
 本地服务器：`npm run server`。服务器运行在`http://127.0.0.1:8080/`
 
-### 发布
+### 生产环境
 
-`npm run build`
+`webpack -p`
 
-### 配置详解
+或
+
+`webpack --production`

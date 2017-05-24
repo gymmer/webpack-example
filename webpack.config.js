@@ -10,20 +10,49 @@ var ExtractTextWebpackPlugin = require('extract-text-webpack-plugin');
 var CleanWebpackPlugin = require('clean-webpack-plugin')
 var CopyWebpackPlugin = require('copy-webpack-plugin');
 
-// 获取绝对路径
-var getAbsolutePath = function(file) {
-	return path.resolve(__dirname, file);
+// process.argv 获取命令行使用的参数
+var isDev = true;  // 不指定参数时，默认开发环境
+for (var i in process.argv) {
+    if (process.argv[i] === "-p" || process.argv[i] === "--production") {
+        isDev = false;
+        break;
+    }
+    if (process.argv[i] === "-d" || process.argv[i] === "--development") {
+        isDev = true;
+        break;
+    }
 }
 
+// 定义一些文件夹的路径
+var ROOT_PATH = path.resolve(__dirname);					// 根路径
+var SRC_PATH = path.resolve(ROOT_PATH, 'src');				// 源文件
+var DEV_PATH = path.resolve(ROOT_PATH, 'dist');				// 开发环境
+var PRO_PATH = path.resolve(ROOT_PATH, 'build');			// 生成环境
+var MOD_PATH = path.resolve(ROOT_PATH, 'node_modules');		// npm模块目录
+
+// 定义一些文件
+var ENTRY_JS_FILE = path.resolve(SRC_PATH, 'entry.js');
+var ENTRY_HTML_FILE = path.resolve(SRC_PATH, 'index.html');
+
+// 开发环境/生成环境的不同配置项
+var OUT_PATH = isDev ? DEV_PATH : PRO_PATH;					// 构建路径
+var FILE_NAME_FORMAT = isDev ? '[name]' : '[name]-[hash]';	// 文件名是否hash
+var SCSS_STYLE = isDev ? 'expanded' : 'compress';			// SCSS编译风格
+var MINIFY_HTML_OPTIONS = isDev ? false : {					// 压缩HTML选项
+	removeComments: true,
+	collapseWhitespace: true
+}
+
+// Webpack配置
 module.exports = {
 
 	// 入口文件
-	entry: getAbsolutePath('src/entry.js'),
+	entry: ENTRY_JS_FILE,
 
 	// 打包输出路径
 	output: {
-		path: getAbsolutePath('dist'),
-		filename: 'js/[name].js'
+		path: OUT_PATH,
+		filename: `js/${FILE_NAME_FORMAT}.js`
 		
 		// 使用CDN
 		// publicPath: 'http://cdn.com/'
@@ -34,6 +63,7 @@ module.exports = {
 	// devtool: 'eval-source-map',//配置生成Source Maps，选择合适的选项
 	
 	module: {
+
 		loaders: [
 
 			// 转换ES6
@@ -43,16 +73,16 @@ module.exports = {
 				query: {
 					presets: ['latest']
 				},
-				include: getAbsolutePath('src'),
-	        	exclude: getAbsolutePath('node_modules')
+				include: SRC_PATH,
+	        	exclude: MOD_PATH
 			},
 
 			// 处理json格式
 			{
         		test: /\.json$/,
 		        loader: 'json-loader',
-	        	include: getAbsolutePath('src'),
-	        	exclude: getAbsolutePath('node_modules')
+	        	include: SRC_PATH,
+	        	exclude: MOD_PATH
 	      	},
 
 	      	// 添加对样式表的处理
@@ -62,8 +92,8 @@ module.exports = {
 		        	fallback: 'style-loader',
 		        	use: 'css-loader'
 	        	}),
-	        	include: getAbsolutePath('src'),
-	        	exclude: getAbsolutePath('node_modules')
+	        	include: SRC_PATH,
+	        	exclude: MOD_PATH
 	      	},
 
 	      	// 编译Less
@@ -73,8 +103,8 @@ module.exports = {
 		        	fallback: 'style-loader',
 		        	use: 'css-loader!less-loader'
 	        	}),
-	        	include: getAbsolutePath('src'),
-	        	exclude: getAbsolutePath('node_modules')
+	        	include: SRC_PATH,
+	        	exclude: MOD_PATH
 	      	},
 
 	      	// 编译Sass+Compass
@@ -82,10 +112,10 @@ module.exports = {
 	        	test: /\.(scss|sass)$/,
 		        loader: ExtractTextWebpackPlugin.extract({
 		        	fallback: 'style-loader',
-		        	use: 'css-loader!ruby-sass-loader?compass=1&outputStyle=expanded'
+		        	use: `css-loader!ruby-sass-loader?compass=1&outputStyle=${SCSS_STYLE}`
 	        	}),
-	        	include: getAbsolutePath('src'),
-	        	exclude: getAbsolutePath('node_modules')
+	        	include: SRC_PATH,
+	        	exclude: MOD_PATH
 	      	}
 
 		]
@@ -95,49 +125,43 @@ module.exports = {
 	// （1）node_modules/.bin/webpack-dev-server
 	// （2）npm run server
 	devServer: {
-	    contentBase: getAbsolutePath('dist'),	// 根目录
-	    // colors: true,//终端中输出结果为彩色
-	    // historyApiFallback: true,//不跳转
-	    inline: true, //实时刷新
+	    contentBase: OUT_PATH,	// 根目录
+	    inline: true, 			// 实时刷新
+	    hot: true,        		// 自动刷新
 	    port: 8080
 	},
 
 	plugins: [
 
 		// 清除构建的目标路径
-		new CleanWebpackPlugin(['dist'], {
-            root: __dirname,
-            verbose: true,
-            dry: false
-        }),
+        new CleanWebpackPlugin(OUT_PATH),
 
 		// 构建HTML文件
 		new HtmlWebpckPlugin({
-			template: getAbsolutePath('src/index.html')
+			template: ENTRY_HTML_FILE,
+			minify: MINIFY_HTML_OPTIONS
 		}),
 
 		// 提取样式文件
-		new ExtractTextWebpackPlugin({
-		    filename: function (getPath) {
-		    	return getPath('css/[name].css').replace('css/js', 'css');
-		    },
-		    allChunks: true
-		}),
+		new ExtractTextWebpackPlugin(`css/${FILE_NAME_FORMAT}.css`),
 
 		// 复制文件
 		new CopyWebpackPlugin([
 			{
-				from: getAbsolutePath('src/img'),
+				from: path.resolve(SRC_PATH, 'img'),
 				to: 'img'
 			},
 			{
-				from: getAbsolutePath('src/fonts'),
+				from: path.resolve(SRC_PATH, 'fonts'),
 				to: 'fonts'
 			}
 		]),
 
+		// 压缩JS文件
+		isDev ? new webpack.BannerPlugin('') : new webpack.optimize.UglifyJsPlugin(),
+
 		// 版权声明
-		new webpack.BannerPlugin("Copyright Alibaba inc.")
+		new webpack.BannerPlugin('Copyright Alibaba Inc.')
 
 	]
 }
