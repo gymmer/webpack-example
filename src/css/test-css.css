@@ -2,3 +2,6 @@
 .test-css {
 	color: green;
 }
+.test-background {
+	background: url('../img/test-background.jpg') no-repeat;
+}
