@@ -1,14 +1,14 @@
-var path = require('path');
+const path = require('path');
 
 // webpack 依赖
-var webpack = require('webpack');
-var devServer = require('webpack-dev-server');
+const webpack = require('webpack');
+const devServer = require('webpack-dev-server');
 
 // webpack 插件
-var HtmlWebpckPlugin = require('html-webpack-plugin');
-var ExtractTextWebpackPlugin = require('extract-text-webpack-plugin');
-var CleanWebpackPlugin = require('clean-webpack-plugin')
-var CopyWebpackPlugin = require('copy-webpack-plugin');
+const HtmlWebpckPlugin = require('html-webpack-plugin');
+const ExtractTextWebpackPlugin = require('extract-text-webpack-plugin');
+const CleanWebpackPlugin = require('clean-webpack-plugin')
+const CopyWebpackPlugin = require('copy-webpack-plugin');
 
 // process.argv 获取命令行使用的参数
 var isDev = true;  // 不指定参数时，默认开发环境
@@ -24,28 +24,30 @@ for (var i in process.argv) {
 }
 
 // 定义一些文件夹的路径
-var ROOT_PATH = path.resolve(__dirname);					// 根路径
-var SRC_PATH = path.resolve(ROOT_PATH, 'src');				// 源文件
-var DEV_PATH = path.resolve(ROOT_PATH, 'dist');				// 开发环境
-var PRO_PATH = path.resolve(ROOT_PATH, 'build');			// 生成环境
-var MOD_PATH = path.resolve(ROOT_PATH, 'node_modules');		// npm模块目录
+const ROOT_PATH = path.resolve(__dirname);						// 根路径
+const SRC_PATH = path.resolve(ROOT_PATH, 'src');				// 源文件
+const DEV_PATH = path.resolve(ROOT_PATH, 'dist');				// 开发环境
+const PRO_PATH = path.resolve(ROOT_PATH, 'build');				// 生成环境
+const MOD_PATH = path.resolve(ROOT_PATH, 'node_modules');		// npm模块目录
 
 // 定义一些文件
-var ENTRY_JS_FILE = path.resolve(SRC_PATH, 'entry.js');
-var ENTRY_HTML_FILE = path.resolve(SRC_PATH, 'index.html');
+const ENTRY_JS_FILE = path.resolve(SRC_PATH, 'entry.js');
+const ENTRY_HTML_FILE = path.resolve(SRC_PATH, 'index.html');
 
 // 开发环境/生成环境的不同配置项
-var OUT_PATH = isDev ? DEV_PATH : PRO_PATH;					// 构建路径
-var FILE_NAME_FORMAT = isDev ? '[name]' : '[name]-[hash]';	// 文件名是否hash
-var SOURCEMAP_TYPE = isDev ? 'source-map' : false;			// sourcemap类型
-var SCSS_STYLE = isDev ? 'expanded' : 'compress';			// SCSS编译风格
-var MINIFY_HTML_OPTIONS = isDev ? false : {					// 压缩HTML选项
+const OUT_PATH = isDev ? DEV_PATH : PRO_PATH;					// 构建路径
+const WEBPACK_SOURCEMAP = isDev ? 'source-map' : false;			// sourcemap类型
+const WEBPACK_COLORS = isDev ? true : true;
+const WEBPACK_REASONS = isDev ? true : false;
+const FILE_NAME_FORMAT = isDev ? '[name]' : '[name]-[hash]';	// 文件名是否hash
+const SCSS_STYLE = isDev ? 'expanded' : 'compress';				// SCSS编译风格
+const MINIFY_HTML_OPTIONS = isDev ? false : {					// 压缩HTML选项
 	removeComments: true,
 	collapseWhitespace: true
 }
 
 // Webpack配置
-module.exports = {
+var WEBPACK_CONFIG = {
 
 	// 入口文件
 	entry: ENTRY_JS_FILE,
@@ -60,7 +62,19 @@ module.exports = {
 	},
 
 	// 使用Source Map
-	devtool: SOURCEMAP_TYPE,
+	devtool: WEBPACK_SOURCEMAP,
+
+	// 控制台输出模式
+	stats: {
+		colors: WEBPACK_COLORS,
+		reasons: WEBPACK_REASONS
+	},
+
+	//
+	resolve: {
+		extensions: ['.js'],
+		alias:{}
+	},
 	
 	module: {
 
@@ -122,7 +136,7 @@ module.exports = {
 	      	// 图片规则
 	      	{
 	      		test: /\.(png|jpg|gif|jpeg|svg)$/i,
-	      		loader: `url-loader?limit=1000&name=img/bg/${FILE_NAME_FORMAT}.[ext]`
+	      		loader: `url-loader?limit=8192&name=img/bg/${FILE_NAME_FORMAT}.[ext]`
 	      	}
 
 		]
@@ -164,11 +178,31 @@ module.exports = {
 			}
 		]),
 
-		// 压缩JS文件
-		isDev ? new webpack.BannerPlugin('') : new webpack.optimize.UglifyJsPlugin(),
-
 		// 版权声明
 		new webpack.BannerPlugin('Copyright Alibaba Inc.')
 
 	]
 }
+
+// 生产环境的插件
+if (!isDev) {
+	let plugins = [
+
+		//
+		new webpack.optimize.DedupePlugin(),
+
+		// 压缩JS文件
+		new webpack.optimize.UglifyJsPlugin(),
+
+		//
+		new webpack.optimize.OccurenceOrderPlugin(),
+
+		//
+		new webpack.optimize.AggresssiveMergingPlugin()
+	];
+
+	WEBPACK_CONFIG.plugins = WEBPACK_CONFIG.plugins.concat(plugins);
+}
+
+// 对外暴露webpack配置
+module.exports = WEBPACK_CONFIG
